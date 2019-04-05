@@ -6,6 +6,7 @@ class DynamoScannerIntegrationSpec extends BaseIntegrationSpec {
       table = TestUsersTableName,
       totalSegments = 1,
       pageSize = 1000,
+      callType = "scan",
       maybeRateLimit = None,
       maybeEndpoint = Some(LocalDynamoDBEndpoint))
 

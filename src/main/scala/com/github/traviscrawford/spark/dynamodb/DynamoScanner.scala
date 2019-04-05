@@ -22,6 +22,7 @@ object DynamoScanner extends BaseScanner {
     table: String,
     totalSegments: Int,
     pageSize: Int,
+    callType: String,
     maybeCredentials: Option[String] = None,
     awsAccessKey: Option[String] = None,
     awsSecretKey: Option[String] = None,
@@ -32,8 +33,9 @@ object DynamoScanner extends BaseScanner {
 
     val segments = 0 until totalSegments
     val scanConfigs = segments.map(idx => {
-      ScanConfig(
+      Config(
         table = table,
+        callType = callType,
         segment = idx,
         totalSegments = segments.length,
         pageSize = pageSize,
@@ -48,7 +50,7 @@ object DynamoScanner extends BaseScanner {
     sc.parallelize(scanConfigs, scanConfigs.length).flatMap(scan)
   }
 
-  private def scan(config: ScanConfig): Iterator[String] = {
+  private def scan(config: Config): Iterator[String] = {
     val maybeRateLimiter = config.maybeRateLimit.map(rateLimit => {
       log.info(s"Segment ${config.segment} using rate limit of $rateLimit")
       RateLimiter.create(rateLimit)

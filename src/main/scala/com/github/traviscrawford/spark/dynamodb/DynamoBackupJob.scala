@@ -36,7 +36,7 @@ object DynamoBackupJob extends Job {
     val awsSecretKey = None
     if (overwrite()) deleteOutputPath(output())
 
-    DynamoScanner(sc, table(), totalSegments(), pageSize(),
+    DynamoScanner(sc, table(), totalSegments(), pageSize(), "scan",
       maybeCredentials, awsAccessKey, awsSecretKey, maybeRateLimit, maybeRegion).saveAsTextFile(output())
   }
 
