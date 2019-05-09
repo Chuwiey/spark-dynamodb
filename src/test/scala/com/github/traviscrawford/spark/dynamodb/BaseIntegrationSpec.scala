@@ -27,8 +27,10 @@ trait BaseIntegrationSpec extends FlatSpec with Matchers {
   protected val LocalDynamoDBEndpoint = s"http://localhost:$LocalDynamoDBPort"
   protected val TestUsersTableName = "test_users"
   protected val UserIdKey = "user_id"
+  protected val UserIdRange = "user_range"
   protected val UsernameKey = "username"
   protected val CreatedAtKey = "__createdAt"
+  protected val TestUsersIndexName = "index_users"
 
   override def withFixture(test: NoArgTest): Outcome = {
     initializeTestUsersTable()
@@ -48,20 +50,45 @@ trait BaseIntegrationSpec extends FlatSpec with Matchers {
       case _: ResourceNotFoundException => // pass
     }
 
+    val secondaryIndex: GlobalSecondaryIndex = new GlobalSecondaryIndex()
+      .withIndexName(TestUsersIndexName)
+      .withProvisionedThroughput(new ProvisionedThroughput(10L, 10L))
+      .withProjection(new Projection().withProjectionType(ProjectionType.ALL))
+
+    secondaryIndex.setKeySchema(
+      Seq(
+        new KeySchemaElement(UserIdRange, "HASH"),
+        new KeySchemaElement(UserIdKey, "RANGE")
+      )
+    )
+
     val createTableRequest = new CreateTableRequest()
       .withTableName(TestUsersTableName)
-      .withAttributeDefinitions(Seq(new AttributeDefinition(UserIdKey, "N")))
-      .withKeySchema(Seq(new KeySchemaElement(UserIdKey, "HASH")))
+      .withAttributeDefinitions(
+        Seq(
+          new AttributeDefinition(UserIdKey, "N"),
+          new AttributeDefinition(UserIdRange, "S")))
+      .withKeySchema(Seq(new KeySchemaElement(UserIdKey, "HASH"), new KeySchemaElement(UserIdRange, "RANGE")))
       .withProvisionedThroughput(new ProvisionedThroughput(10L, 10L))
+      .withGlobalSecondaryIndexes(secondaryIndex)
 
     val table = dynamodb.createTable(createTableRequest)
 
     assert(table.getTableName == TestUsersTableName)
 
     val items = Seq(
-      new Item().withNumber(UserIdKey, 1).withString(UsernameKey, "a").withNumber(CreatedAtKey, 11),
-      new Item().withNumber(UserIdKey, 2).withString(UsernameKey, "b").withNumber(CreatedAtKey, 22),
-      new Item().withNumber(UserIdKey, 3).withString(UsernameKey, "c").withNumber(CreatedAtKey, 33))
+      new Item().withNumber(UserIdKey, 1)
+        .withString(UserIdRange, "aa")
+        .withString(UsernameKey, "a")
+        .withNumber(CreatedAtKey, 11),
+      new Item().withNumber(UserIdKey, 2)
+        .withString(UserIdRange, "bb")
+        .withString(UsernameKey, "b")
+        .withNumber(CreatedAtKey, 22),
+      new Item().withNumber(UserIdKey, 3)
+        .withString(UserIdRange, "cc")
+        .withString(UsernameKey, "c")
+        .withNumber(CreatedAtKey, 33))
 
     items.foreach(table.putItem)
   }
